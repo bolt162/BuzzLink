@@ -1,0 +1,138 @@
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import { Message, TypingEvent, PresenceEvent } from '@/types';
+
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
+
+export class WebSocketClient {
+  private client: Client | null = null;
+  private clerkId: string;
+  private onMessageCallback?: (message: Message) => void;
+  private onTypingCallback?: (event: TypingEvent) => void;
+  private onPresenceCallback?: (event: PresenceEvent) => void;
+
+  constructor(clerkId: string) {
+    this.clerkId = clerkId;
+  }
+
+  connect(onConnected?: () => void) {
+    this.client = new Client({
+      webSocketFactory: () => new SockJS(WS_URL) as any,
+      debug: (str) => {
+        console.log('STOMP Debug:', str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    this.client.onConnect = () => {
+      console.log('WebSocket connected');
+      onConnected?.();
+    };
+
+    this.client.onStompError = (frame) => {
+      console.error('STOMP error:', frame);
+    };
+
+    this.client.activate();
+  }
+
+  disconnect() {
+    if (this.client) {
+      this.client.deactivate();
+      this.client = null;
+    }
+  }
+
+  subscribeToChannel(
+    channelId: number,
+    onMessage: (message: Message) => void,
+    onTyping: (event: TypingEvent) => void,
+    onPresence: (event: PresenceEvent) => void
+  ) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.onMessageCallback = onMessage;
+    this.onTypingCallback = onTyping;
+    this.onPresenceCallback = onPresence;
+
+    // Subscribe to messages
+    this.client.subscribe(`/topic/channel.${channelId}`, (message) => {
+      const chatMessage = JSON.parse(message.body);
+      onMessage(chatMessage);
+    });
+
+    // Subscribe to typing indicators
+    this.client.subscribe(`/topic/channel.${channelId}.typing`, (message) => {
+      const typingEvent = JSON.parse(message.body);
+      onTyping(typingEvent);
+    });
+
+    // Subscribe to presence updates
+    this.client.subscribe(`/topic/channel.${channelId}.presence`, (message) => {
+      const presenceEvent = JSON.parse(message.body);
+      onPresence(presenceEvent);
+    });
+
+    // Join the channel
+    this.client.publish({
+      destination: '/app/chat.join',
+      body: JSON.stringify({
+        channelId,
+        clerkId: this.clerkId,
+      }),
+    });
+  }
+
+  sendMessage(channelId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT') {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.client.publish({
+      destination: '/app/chat.sendMessage',
+      body: JSON.stringify({
+        channelId,
+        clerkId: this.clerkId,
+        content,
+        type,
+      }),
+    });
+  }
+
+  sendTyping(channelId: number, displayName: string, isTyping: boolean) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.client.publish({
+      destination: '/app/chat.typing',
+      body: JSON.stringify({
+        channelId,
+        clerkId: this.clerkId,
+        displayName,
+        isTyping,
+      }),
+    });
+  }
+
+  leaveChannel(channelId: number) {
+    if (!this.client) {
+      return;
+    }
+
+    this.client.publish({
+      destination: '/app/chat.leave',
+      body: JSON.stringify({
+        channelId,
+        clerkId: this.clerkId,
+      }),
+    });
+  }
+}
