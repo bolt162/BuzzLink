@@ -232,6 +232,7 @@ export interface AdminUser {
 
 export interface SystemStats {
   totalUsers: number;
+  totalWorkspaces: number;
   totalChannels: number;
   totalMessages: number;
   totalDirectMessages: number;

@@ -216,11 +216,26 @@ public class AdminController {
         }
 
         // If no log file found, return mock logs for demo
-        logs.add(createMockLog("INFO", "Application started successfully"));
-        logs.add(createMockLog("INFO", "WebSocket connection established"));
-        logs.add(createMockLog("DEBUG", "User authentication completed"));
-        logs.add(createMockLog("INFO", "Message sent to channel"));
-        logs.add(createMockLog("WARN", "High memory usage detected"));
+        logs.add(createMockLog("INFO", "Application started on port 8080"));
+        logs.add(createMockLog("INFO", "User logged in: user_363I3otryN1G1UxNwTVRFaBNcHS"));
+        logs.add(createMockLog("INFO", "Workspace created: 'Engineering Team'"));
+        logs.add(createMockLog("INFO", "Channel created: #general"));
+        logs.add(createMockLog("INFO", "WebSocket connection established for user: johndoe"));
+        logs.add(createMockLog("DEBUG", "User authentication completed successfully"));
+        logs.add(createMockLog("INFO", "Message sent to channel #general: 'Hello team!'"));
+        logs.add(createMockLog("INFO", "Direct message sent from user1 to user2"));
+        logs.add(createMockLog("INFO", "Invitation sent to: john@example.com"));
+        logs.add(createMockLog("WARN", "Database connection pool reaching capacity (80%)"));
+        logs.add(createMockLog("INFO", "Workspace member added to 'Marketing Team'"));
+        logs.add(createMockLog("DEBUG", "Cache hit for user profile: user_123"));
+        logs.add(createMockLog("INFO", "Thread reply posted in channel #development"));
+        logs.add(createMockLog("WARN", "Slow query detected: getUserConversations (1.2s)"));
+        logs.add(createMockLog("INFO", "User logged out: jane@example.com"));
+        logs.add(createMockLog("ERROR", "Failed to send email invitation: SMTP timeout"));
+        logs.add(createMockLog("INFO", "Reaction added to message: 👍"));
+        logs.add(createMockLog("INFO", "User updated profile picture"));
+        logs.add(createMockLog("WARN", "High memory usage detected: 85% used"));
+        logs.add(createMockLog("INFO", "Channel deleted: #old-projects"));
 
         return logs;
     }

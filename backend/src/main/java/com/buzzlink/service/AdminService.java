@@ -5,6 +5,7 @@ import com.buzzlink.repository.ChannelRepository;
 import com.buzzlink.repository.DirectMessageRepository;
 import com.buzzlink.repository.MessageRepository;
 import com.buzzlink.repository.UserRepository;
+import com.buzzlink.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class AdminService {
     private final MessageRepository messageRepository;
     private final DirectMessageRepository directMessageRepository;
     private final ChannelRepository channelRepository;
+    private final WorkspaceRepository workspaceRepository;
 
     /**
      * Check if user is admin
@@ -62,6 +64,7 @@ public class AdminService {
     public Map<String, Object> getSystemStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", userRepository.count());
+        stats.put("totalWorkspaces", workspaceRepository.count());
         stats.put("totalChannels", channelRepository.count());
         stats.put("totalMessages", messageRepository.count());
         stats.put("totalDirectMessages", directMessageRepository.count());
