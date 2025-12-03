@@ -34,4 +34,7 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, Lo
     @Query("SELECT dm FROM DirectMessage dm WHERE dm.sender.id = :userId OR dm.recipient.id = :userId " +
            "ORDER BY dm.createdAt DESC")
     List<DirectMessage> findRecentMessages(@Param("userId") Long userId, Pageable pageable);
+
+    // Count DMs by sender (for admin dashboard)
+    long countBySender(com.buzzlink.entity.User sender);
 }

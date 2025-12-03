@@ -40,4 +40,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      */
     @Query("SELECT m FROM Message m WHERE m.channel = :channel AND m.parentMessage IS NULL ORDER BY m.createdAt DESC")
     List<Message> findTopLevelMessagesByChannel(Channel channel, Pageable pageable);
+
+    /**
+     * Count messages by sender (for admin dashboard)
+     */
+    long countBySender(com.buzzlink.entity.User sender);
 }

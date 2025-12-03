@@ -45,6 +45,12 @@ public class User {
     private Boolean isAdmin = false;
 
     /**
+     * Ban flag - banned users cannot send messages or access channels
+     */
+    @Column(nullable = false)
+    private Boolean isBanned = false;
+
+    /**
      * Email from Clerk (optional, for reference)
      */
     private String email;

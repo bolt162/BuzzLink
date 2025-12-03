@@ -217,4 +217,63 @@ export const markAllNotificationsAsRead = async (clerkId: string): Promise<void>
   await api.put('/api/notifications/read-all', null, { params: { clerkId } });
 };
 
+// Admin APIs
+export interface AdminUser {
+  id: number;
+  clerkId: string;
+  displayName: string;
+  email: string;
+  avatarUrl?: string;
+  isAdmin: boolean;
+  isBanned: boolean;
+  createdAt: string;
+  messageCount: number;
+}
+
+export interface SystemStats {
+  totalUsers: number;
+  totalChannels: number;
+  totalMessages: number;
+  totalDirectMessages: number;
+  bannedUsers: number;
+  adminUsers: number;
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+}
+
+export const getAllUsers = async (): Promise<AdminUser[]> => {
+  const response = await api.get('/api/admin/users');
+  return response.data;
+};
+
+export const getSystemStats = async (): Promise<SystemStats> => {
+  const response = await api.get('/api/admin/stats');
+  return response.data;
+};
+
+export const banUser = async (userId: number): Promise<void> => {
+  await api.post(`/api/admin/users/${userId}/ban`);
+};
+
+export const unbanUser = async (userId: number): Promise<void> => {
+  await api.post(`/api/admin/users/${userId}/unban`);
+};
+
+export const deleteUser = async (userId: number): Promise<void> => {
+  await api.delete(`/api/admin/users/${userId}`);
+};
+
+export const toggleAdminStatus = async (userId: number): Promise<void> => {
+  await api.post(`/api/admin/users/${userId}/toggle-admin`);
+};
+
+export const getLogs = async (limit = 100, level = 'INFO'): Promise<{ logs: LogEntry[]; count: number; level: string }> => {
+  const response = await api.get('/api/admin/logs', { params: { limit, level } });
+  return response.data;
+};
+
 export default api;
