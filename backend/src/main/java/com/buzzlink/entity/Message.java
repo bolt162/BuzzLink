@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "messages", indexes = {
-    @Index(name = "idx_channel_created", columnList = "channel_id,created_at")
+        @Index(name = "idx_channel_created", columnList = "channel_id,created_at")
 })
 @Data
 @NoArgsConstructor
@@ -51,6 +51,20 @@ public class Message {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MessageType type = MessageType.TEXT;
+
+    /**
+     * Parent message ID for threaded replies
+     * Null for top-level messages
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_message_id")
+    private Message parentMessage;
+
+    /**
+     * Number of replies to this message
+     */
+    @Column(nullable = false)
+    private Integer replyCount = 0;
 
     @CreationTimestamp
     @Column(updatable = false)

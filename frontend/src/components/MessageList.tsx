@@ -9,12 +9,18 @@ interface MessageListProps {
   messages: Message[];
   onMessageDeleted: (messageId: number) => void;
   onReactionToggled: (messageId: number, newCount: number) => void;
+  onReply?: (message: Message) => void; // Optional - only for channel messages
+  showReplyButton?: boolean; // Whether to show reply buttons
+  showReactions?: boolean; // Whether to show reaction buttons (default: true)
 }
 
 export default function MessageList({
   messages,
   onMessageDeleted,
   onReactionToggled,
+  onReply,
+  showReplyButton = false,
+  showReactions = true,
 }: MessageListProps) {
   const { user } = useUser();
   const [loadingReaction, setLoadingReaction] = useState<number | null>(null);
@@ -91,18 +97,35 @@ export default function MessageList({
               )}
             </div>
             <div className="flex items-center space-x-2 mt-2">
-              <button
-                onClick={() => handleReaction(message.id)}
-                disabled={loadingReaction === message.id}
-                className={`flex items-center space-x-1 px-2 py-1 rounded hover:bg-gray-200 transition ${
-                  loadingReaction === message.id ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <span>👍</span>
-                {message.reactionCount > 0 && (
-                  <span className="text-sm text-gray-600">{message.reactionCount}</span>
-                )}
-              </button>
+              {showReactions && (
+                <button
+                  onClick={() => handleReaction(message.id)}
+                  disabled={loadingReaction === message.id}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded hover:bg-gray-200 transition ${loadingReaction === message.id ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                >
+                  <span>👍</span>
+                  {message.reactionCount > 0 && (
+                    <span className="text-sm text-gray-600">{message.reactionCount}</span>
+                  )}
+                </button>
+              )}
+              {showReplyButton && onReply && (
+                <button
+                  onClick={() => onReply(message)}
+                  className="flex items-center space-x-1 px-2 py-1 rounded hover:bg-gray-200 transition text-sm text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  <span>Reply</span>
+                  {message.replyCount > 0 && (
+                    <span className="bg-blue-100 text-blue-600 px-1.5 rounded-full text-xs">
+                      {message.replyCount}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
           {isAdmin && (

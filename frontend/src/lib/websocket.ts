@@ -1,6 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { Message, TypingEvent, PresenceEvent } from '@/types';
+import { Message, TypingEvent, PresenceEvent, DirectMessage, Notification } from '@/types';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws';
 
@@ -10,6 +10,9 @@ export class WebSocketClient {
   private onMessageCallback?: (message: Message) => void;
   private onTypingCallback?: (event: TypingEvent) => void;
   private onPresenceCallback?: (event: PresenceEvent) => void;
+  private onDirectMessageCallback?: (dm: DirectMessage) => void;
+  private onNotificationCallback?: (notification: Notification) => void;
+  private onNotificationCountCallback?: (count: number) => void;
 
   constructor(clerkId: string) {
     this.clerkId = clerkId;
@@ -88,7 +91,7 @@ export class WebSocketClient {
     });
   }
 
-  sendMessage(channelId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT') {
+  sendMessage(channelId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT', parentMessageId?: number) {
     if (!this.client) {
       console.error('WebSocket not connected');
       return;
@@ -101,6 +104,7 @@ export class WebSocketClient {
         clerkId: this.clerkId,
         content,
         type,
+        parentMessageId: parentMessageId || null,
       }),
     });
   }
@@ -133,6 +137,63 @@ export class WebSocketClient {
         channelId,
         clerkId: this.clerkId,
       }),
+    });
+  }
+
+  subscribeToDMs(onDirectMessage: (dm: DirectMessage) => void) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.onDirectMessageCallback = onDirectMessage;
+
+    // Subscribe to user's personal queue for DMs
+    this.client.subscribe(`/user/queue/messages`, (message) => {
+      const dm = JSON.parse(message.body);
+      onDirectMessage(dm);
+    });
+  }
+
+  sendDirectMessage(recipientId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT') {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.client.publish({
+      destination: '/app/dm.send',
+      body: JSON.stringify({
+        senderClerkId: this.clerkId,
+        recipientId,
+        content,
+        type,
+      }),
+    });
+  }
+
+  subscribeToNotifications(
+    onNotification: (notification: Notification) => void,
+    onCountUpdate: (count: number) => void
+  ) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.onNotificationCallback = onNotification;
+    this.onNotificationCountCallback = onCountUpdate;
+
+    // Subscribe to notifications
+    this.client.subscribe(`/user/queue/notifications`, (message) => {
+      const notification = JSON.parse(message.body);
+      onNotification(notification);
+    });
+
+    // Subscribe to notification count updates
+    this.client.subscribe(`/user/queue/notifications/count`, (message) => {
+      const count = JSON.parse(message.body);
+      onCountUpdate(count);
     });
   }
 }

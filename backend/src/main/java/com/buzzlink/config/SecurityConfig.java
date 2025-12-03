@@ -23,16 +23,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable()) // Disabled for demo; in production, use proper CSRF protection
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/ws/**").permitAll() // Allow WebSocket connections
-                .requestMatchers("/h2-console/**").permitAll() // Allow H2 console for dev
-                .requestMatchers("/actuator/**").permitAll() // Allow actuator endpoints
-                .requestMatchers("/api/**").permitAll() // For demo, allow all API access
-                .anyRequest().authenticated()
-            )
-            .headers(headers -> headers.frameOptions(frame -> frame.disable())); // For H2 console
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable()) // Disabled for demo; in production, use proper CSRF protection
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket connections
+                        .requestMatchers("/h2-console/**").permitAll() // Allow H2 console for dev
+                        .requestMatchers("/actuator/**").permitAll() // Allow actuator endpoints
+                        .requestMatchers("/api/**").permitAll() // For demo, allow all API access
+                        .anyRequest().authenticated())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable())); // For H2 console
 
         return http.build();
     }
@@ -40,7 +39,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

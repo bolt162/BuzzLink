@@ -1,6 +1,7 @@
 import { SignInButton, SignUpButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
+import Image from 'next/image';
 
 export default async function Home() {
   const { userId } = await auth();
@@ -14,7 +15,9 @@ export default async function Home() {
       <SignedOut>
         <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-            <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">BuzzLink</h1>
+            <div className="flex justify-center mb-2">
+              <Image src="/black_buzzlink.png" alt="BuzzLink Logo" width={160} height={120} />
+            </div>
             <p className="text-center text-gray-600 mb-8">Enterprise Chat Application</p>
             <div className="space-y-4">
               <SignInButton mode="modal">

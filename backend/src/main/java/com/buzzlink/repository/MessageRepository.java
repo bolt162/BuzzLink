@@ -29,4 +29,15 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      * Count messages in a channel (useful for analytics)
      */
     long countByChannel(Channel channel);
+
+    /**
+     * Find all replies to a parent message, ordered by creation time
+     */
+    List<Message> findByParentMessageOrderByCreatedAtAsc(Message parentMessage);
+
+    /**
+     * Find top-level messages in a channel (messages without a parent)
+     */
+    @Query("SELECT m FROM Message m WHERE m.channel = :channel AND m.parentMessage IS NULL ORDER BY m.createdAt DESC")
+    List<Message> findTopLevelMessagesByChannel(Channel channel, Pageable pageable);
 }

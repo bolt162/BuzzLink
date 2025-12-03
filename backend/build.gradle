@@ -60,6 +60,9 @@ dependencies {
     // JSON processing
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
+    // Email support
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

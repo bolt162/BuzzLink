@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Channel, Message, User } from '@/types';
+import { Channel, Message, User, Workspace, DirectMessage, Conversation, Notification } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -15,14 +15,62 @@ export const setClerkUserId = (clerkId: string) => {
   api.defaults.headers.common['X-Clerk-User-Id'] = clerkId;
 };
 
+// Workspace APIs
+export const getWorkspaces = async (clerkId: string): Promise<Workspace[]> => {
+  const response = await api.get('/api/workspaces', { params: { clerkId } });
+  return response.data;
+};
+
+export const getWorkspaceBySlug = async (slug: string, clerkId: string): Promise<Workspace> => {
+  const response = await api.get(`/api/workspaces/${slug}`, { params: { clerkId } });
+  return response.data;
+};
+
+export const createWorkspace = async (
+  name: string,
+  slug: string,
+  description: string,
+  creatorClerkId: string
+): Promise<Workspace> => {
+  const response = await api.post('/api/workspaces', {
+    name,
+    slug,
+    description,
+    creatorClerkId,
+  });
+  return response.data;
+};
+
+export const getWorkspaceMembers = async (workspaceId: number, clerkId: string): Promise<User[]> => {
+  const response = await api.get(`/api/workspaces/${workspaceId}/members`, {
+    params: { clerkId },
+  });
+  return response.data;
+};
+
 // Channel APIs
-export const getChannels = async (): Promise<Channel[]> => {
-  const response = await api.get('/api/channels');
+export const getChannels = async (workspaceId?: number): Promise<Channel[]> => {
+  const response = await api.get('/api/channels', {
+    params: workspaceId ? { workspaceId } : {},
+  });
   return response.data;
 };
 
 export const getChannel = async (id: number): Promise<Channel> => {
   const response = await api.get(`/api/channels/${id}`);
+  return response.data;
+};
+
+export const createChannel = async (
+  name: string,
+  description: string,
+  workspaceId: number
+): Promise<Channel> => {
+  const response = await api.post('/api/channels', {
+    name,
+    description,
+    workspaceId,
+  });
   return response.data;
 };
 
@@ -42,6 +90,12 @@ export const toggleReaction = async (messageId: number): Promise<{ count: number
   const response = await api.post(`/api/messages/${messageId}/reactions`);
   return response.data;
 };
+
+export const getThreadReplies = async (messageId: number): Promise<Message[]> => {
+  const response = await api.get(`/api/messages/${messageId}/replies`);
+  return response.data;
+};
+
 
 // User APIs
 export const syncUser = async (
@@ -73,6 +127,94 @@ export const updateProfile = async (
     avatarUrl,
   });
   return response.data;
+};
+
+export const searchUsers = async (query: string): Promise<User[]> => {
+  const response = await api.get('/api/users/search', { params: { query } });
+  return response.data;
+};
+
+export const addWorkspaceMember = async (
+  workspaceId: number,
+  clerkId: string,
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' = 'MEMBER'
+): Promise<void> => {
+  await api.post(`/api/workspaces/${workspaceId}/members`, {
+    clerkId,
+    role,
+  });
+};
+
+// Invitation APIs
+export const sendWorkspaceInvitation = async (
+  workspaceId: number,
+  email: string,
+  inviterClerkId: string,
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' = 'MEMBER'
+): Promise<{ message: string; invitationId: number; status: string }> => {
+  const response = await api.post('/api/invitations', {
+    workspaceId,
+    email,
+    inviterClerkId,
+    role,
+  });
+  return response.data;
+};
+
+// Direct Message APIs
+export const getConversations = async (clerkId: string): Promise<Conversation[]> => {
+  const response = await api.get('/api/direct-messages/conversations', { params: { clerkId } });
+  return response.data;
+};
+
+export const getConversation = async (
+  clerkId: string,
+  otherUserId: number,
+  limit = 50
+): Promise<DirectMessage[]> => {
+  const response = await api.get(`/api/direct-messages/conversation/${otherUserId}`, {
+    params: { clerkId, limit },
+  });
+  return response.data;
+};
+
+export const sendDirectMessage = async (
+  senderClerkId: string,
+  recipientId: number,
+  content: string,
+  type: 'TEXT' | 'FILE' = 'TEXT'
+): Promise<DirectMessage> => {
+  const response = await api.post('/api/direct-messages', {
+    senderClerkId,
+    recipientId,
+    content,
+    type,
+  });
+  return response.data;
+};
+
+// Notification APIs
+export const getNotifications = async (clerkId: string): Promise<Notification[]> => {
+  const response = await api.get('/api/notifications', { params: { clerkId } });
+  return response.data;
+};
+
+export const getUnreadNotifications = async (clerkId: string): Promise<Notification[]> => {
+  const response = await api.get('/api/notifications/unread', { params: { clerkId } });
+  return response.data;
+};
+
+export const getUnreadNotificationCount = async (clerkId: string): Promise<number> => {
+  const response = await api.get<{ count: number }>('/api/notifications/unread/count', { params: { clerkId } });
+  return response.data.count;
+};
+
+export const markNotificationAsRead = async (notificationId: number, clerkId: string): Promise<void> => {
+  await api.put(`/api/notifications/${notificationId}/read`, null, { params: { clerkId } });
+};
+
+export const markAllNotificationsAsRead = async (clerkId: string): Promise<void> => {
+  await api.put('/api/notifications/read-all', null, { params: { clerkId } });
 };
 
 export default api;

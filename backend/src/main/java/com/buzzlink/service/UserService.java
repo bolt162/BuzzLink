@@ -3,19 +3,29 @@ package com.buzzlink.service;
 import com.buzzlink.entity.User;
 import com.buzzlink.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Service for managing users
  */
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+
+    @Lazy
+    @Autowired
+    private InvitationService invitationService;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     /**
      * Find user by Clerk ID
@@ -49,7 +59,14 @@ public class UserService {
             newUser.setEmail(email);
             newUser.setAvatarUrl(avatarUrl);
             newUser.setIsAdmin(false); // Default to non-admin
-            return userRepository.save(newUser);
+            User savedUser = userRepository.save(newUser);
+
+            // Auto-accept any pending invitations for this email
+            if (invitationService != null) {
+                invitationService.acceptPendingInvitations(email, clerkId);
+            }
+
+            return savedUser;
         }
     }
 
@@ -90,5 +107,22 @@ public class UserService {
             .orElseThrow(() -> new RuntimeException("User not found"));
         user.setIsAdmin(isAdmin);
         userRepository.save(user);
+    }
+
+    /**
+     * Get all users (for debugging/admin)
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    /**
+     * Search users by display name or email
+     */
+    public List<User> searchUsers(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return userRepository.searchUsers(query.trim());
     }
 }

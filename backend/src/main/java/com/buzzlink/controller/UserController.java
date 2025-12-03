@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * REST controller for user operations
  */
@@ -63,6 +66,32 @@ public class UserController {
     public ResponseEntity<Void> makeAdmin(@RequestBody MakeAdminRequest request) {
         userService.setAdmin(request.clerkId(), request.isAdmin());
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * GET /api/users - List all users (for debugging)
+     */
+    @GetMapping
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        List<UserDTO> userDTOs = users.stream()
+            .map(UserDTO::fromEntity)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(userDTOs);
+    }
+
+    /**
+     * GET /api/users/search - Search users by name or email
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam String query) {
+        System.out.println("Searching for users with query: " + query);
+        List<User> users = userService.searchUsers(query);
+        System.out.println("Found " + users.size() + " users");
+        List<UserDTO> userDTOs = users.stream()
+            .map(UserDTO::fromEntity)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(userDTOs);
     }
 
     /**

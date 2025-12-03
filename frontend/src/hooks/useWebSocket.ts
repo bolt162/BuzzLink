@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { WebSocketClient } from '@/lib/websocket';
-import { Message, TypingEvent, PresenceEvent } from '@/types';
+import { Message, TypingEvent, PresenceEvent, DirectMessage, Notification } from '@/types';
 
 export const useWebSocket = (clerkId: string | null) => {
   const [connected, setConnected] = useState(false);
@@ -33,9 +33,9 @@ export const useWebSocket = (clerkId: string | null) => {
     }
   };
 
-  const sendMessage = (channelId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT') => {
+  const sendMessage = (channelId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT', parentMessageId?: number) => {
     if (clientRef.current) {
-      clientRef.current.sendMessage(channelId, content, type);
+      clientRef.current.sendMessage(channelId, content, type, parentMessageId);
     }
   };
 
@@ -51,11 +51,35 @@ export const useWebSocket = (clerkId: string | null) => {
     }
   };
 
+  const subscribeToDMs = (onDirectMessage: (dm: DirectMessage) => void) => {
+    if (clientRef.current) {
+      clientRef.current.subscribeToDMs(onDirectMessage);
+    }
+  };
+
+  const sendDirectMessage = (senderClerkId: string, recipientId: number, content: string, type: 'TEXT' | 'FILE' = 'TEXT') => {
+    if (clientRef.current) {
+      clientRef.current.sendDirectMessage(recipientId, content, type);
+    }
+  };
+
+  const subscribeToNotifications = (
+    onNotification: (notification: Notification) => void,
+    onCountUpdate: (count: number) => void
+  ) => {
+    if (clientRef.current) {
+      clientRef.current.subscribeToNotifications(onNotification, onCountUpdate);
+    }
+  };
+
   return {
     connected,
     subscribeToChannel,
     sendMessage,
     sendTyping,
     leaveChannel,
+    subscribeToDMs,
+    sendDirectMessage,
+    subscribeToNotifications,
   };
 };

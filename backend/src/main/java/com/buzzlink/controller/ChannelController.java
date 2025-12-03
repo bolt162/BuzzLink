@@ -2,7 +2,9 @@ package com.buzzlink.controller;
 
 import com.buzzlink.dto.ChannelDTO;
 import com.buzzlink.entity.Channel;
+import com.buzzlink.entity.Workspace;
 import com.buzzlink.repository.ChannelRepository;
+import com.buzzlink.service.WorkspaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +22,21 @@ import java.util.stream.Collectors;
 public class ChannelController {
 
     private final ChannelRepository channelRepository;
+    private final WorkspaceService workspaceService;
 
     /**
-     * GET /api/channels - List all channels
+     * GET /api/channels - List all channels (optionally filtered by workspace)
      */
     @GetMapping
-    public ResponseEntity<List<ChannelDTO>> getAllChannels() {
-        List<Channel> channels = channelRepository.findAll();
+    public ResponseEntity<List<ChannelDTO>> getAllChannels(@RequestParam(required = false) Long workspaceId) {
+        List<Channel> channels;
+
+        if (workspaceId != null) {
+            channels = channelRepository.findByWorkspaceId(workspaceId);
+        } else {
+            channels = channelRepository.findAll();
+        }
+
         List<ChannelDTO> channelDTOs = channels.stream()
             .map(ChannelDTO::fromEntity)
             .collect(Collectors.toList());
@@ -52,6 +62,10 @@ public class ChannelController {
         channel.setName(request.name());
         channel.setDescription(request.description());
 
+        // Get workspace
+        Workspace workspace = workspaceService.getWorkspaceById(request.workspaceId());
+        channel.setWorkspace(workspace);
+
         Channel savedChannel = channelRepository.save(channel);
         return ResponseEntity.ok(ChannelDTO.fromEntity(savedChannel));
     }
@@ -59,5 +73,5 @@ public class ChannelController {
     /**
      * Request body for creating a channel
      */
-    public record CreateChannelRequest(String name, String description) {}
+    public record CreateChannelRequest(String name, String description, Long workspaceId) {}
 }

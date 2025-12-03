@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
  * Channels are like Slack channels - users can join and send messages.
  */
 @Entity
-@Table(name = "channels")
+@Table(name = "channels", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"name", "workspace_id"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,14 +27,22 @@ public class Channel {
 
     /**
      * Channel name (e.g., "general", "random", "engineering")
+     * Must be unique within a workspace
      */
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String name;
 
     /**
      * Channel description (optional)
      */
     private String description;
+
+    /**
+     * Workspace this channel belongs to
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
 
     @CreationTimestamp
     @Column(updatable = false)
