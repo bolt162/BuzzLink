@@ -21,9 +21,13 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, Lo
                                          @Param("userId2") Long userId2,
                                          Pageable pageable);
 
-    // Get all conversations for a user (distinct users they've messaged with)
-    @Query("SELECT DISTINCT CASE WHEN dm.sender.id = :userId THEN dm.recipient ELSE dm.sender END " +
-           "FROM DirectMessage dm WHERE dm.sender.id = :userId OR dm.recipient.id = :userId")
+    // Get all conversation partners for a user (users they've messaged with)
+    @Query(value = "SELECT DISTINCT u.* FROM users u " +
+           "WHERE u.id IN (" +
+           "  SELECT DISTINCT recipient_id FROM direct_messages WHERE sender_id = :userId " +
+           "  UNION " +
+           "  SELECT DISTINCT sender_id FROM direct_messages WHERE recipient_id = :userId AND sender_id != :userId" +
+           ")", nativeQuery = true)
     List<com.buzzlink.entity.User> findConversationPartners(@Param("userId") Long userId);
 
     // Get recent DMs for a user
