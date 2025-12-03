@@ -103,9 +103,11 @@ export default function Header() {
       <div className="flex items-center space-x-4">
         <Image src="/white_buzzlink.png" alt="BuzzLink Logo" width={80} height={60} />
         {Boolean(user?.publicMetadata?.isAdmin) && (
-          <span className="bg-yellow-500 text-black text-xs font-semibold px-2 py-1 rounded">
-            ADMIN
-          </span>
+          <Link href="/admin">
+            <span className="bg-yellow-500 text-black text-xs font-semibold px-2 py-1 rounded cursor-pointer hover:bg-yellow-400 transition">
+              ADMIN
+            </span>
+          </Link>
         )}
       </div>
       <div className="flex items-center space-x-6">

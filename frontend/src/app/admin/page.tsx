@@ -44,16 +44,22 @@ export default function AdminDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading admin data...');
       const [usersData, statsData, logsData] = await Promise.all([
         getAllUsers(),
         getSystemStats(),
         getLogs(100, logLevel),
       ]);
+      console.log('Users data:', usersData);
+      console.log('Stats data:', statsData);
+      console.log('Logs data:', logsData);
       setUsers(usersData);
       setStats(statsData);
       setLogs(logsData.logs);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading admin data:', error);
+      console.error('Error response:', error.response?.data);
+      alert(`Failed to load admin data: ${error.response?.data || error.message}`);
     } finally {
       setLoading(false);
     }
