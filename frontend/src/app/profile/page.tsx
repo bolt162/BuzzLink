@@ -119,7 +119,7 @@ export default function ProfilePage() {
               <p>
                 <span className="font-medium">User ID:</span> {user?.id}
               </p>
-              {user?.publicMetadata?.isAdmin && (
+              {Boolean(user?.publicMetadata?.isAdmin) && (
                 <p className="text-yellow-600 font-medium">Admin Account</p>
               )}
             </div>
