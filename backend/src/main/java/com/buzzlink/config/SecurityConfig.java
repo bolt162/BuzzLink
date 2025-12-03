@@ -44,7 +44,14 @@ public class SecurityConfig {
                 "http://localhost:3001",
                 "http://54.193.63.14:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.addAllowedHeader("*"); // This is the correct way to allow all headers with credentials
+        // List common headers explicitly - no wildcards allowed with credentials
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "X-Clerk-User-Id",
+                "Cache-Control"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
