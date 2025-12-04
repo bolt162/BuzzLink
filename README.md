@@ -27,8 +27,32 @@ BuzzLink is a class project demonstrating key enterprise software concepts inclu
 | Monitoring | Prometheus + Grafana | 📋 Design Only |
 | Analytics | Apache Superset | 📋 Design Only |
 | CI/CD | Jenkins | 📋 Pipeline Definition |
+| Infrastructure | Terraform (AWS) | ✅ Implemented |
 
-## Quick Start
+## 🚀 Deployment Options
+
+### Option 1: AWS Deployment (Recommended - Fully Automated)
+
+Deploy to AWS EC2 with one command using Terraform:
+
+```bash
+# Configure and deploy
+./scripts/setup-terraform.sh
+./scripts/terraform-deploy.sh
+```
+
+**See:** [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for step-by-step guide
+
+**Features:**
+- ✅ Fully automated infrastructure provisioning
+- ✅ Docker-based deployment
+- ✅ Auto-scaling ready
+- ✅ Production-ready security
+- ✅ Free tier compatible (~$0/month for 12 months)
+
+### Option 2: Local Development
+
+## Quick Start (Local)
 
 ### Prerequisites
 
@@ -305,11 +329,22 @@ See [docs/BI_ANALYTICS.md](docs/BI_ANALYTICS.md) for dashboard designs.
 
 This project is for educational purposes only.
 
+## 📚 Documentation
+
+- **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - Step-by-step AWS deployment guide
+- **[INFRASTRUCTURE_SETUP.md](./INFRASTRUCTURE_SETUP.md)** - Detailed infrastructure setup
+- **[terraform/README.md](./terraform/README.md)** - Terraform configuration details
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture
+- **[docs/API.md](./docs/API.md)** - API documentation
+- **[docs/MONITORING.md](./docs/MONITORING.md)** - Monitoring design
+- **[docs/BI_ANALYTICS.md](./docs/BI_ANALYTICS.md)** - Analytics design
+
 ## Resources
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Clerk Documentation](https://clerk.com/docs)
 - [WebSocket/STOMP Guide](https://spring.io/guides/gs/messaging-stomp-websocket/)
+- [Terraform Documentation](https://www.terraform.io/docs)
 - [Prometheus Documentation](https://prometheus.io/docs/)
 - [Apache Superset](https://superset.apache.org/)

@@ -46,6 +46,14 @@ secrets/
 *.pem
 *.key
 
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/tfplan
+terraform/terraform.tfvars
+
 # Temporary files
 *.tmp
 *.bak
