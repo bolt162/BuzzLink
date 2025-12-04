@@ -99,30 +99,30 @@ INSERT INTO user_workspace_members (user_id, workspace_id, role, joined_at) VALU
 -- ================================================================================
 -- CHANNELS (15 channels across workspaces)
 -- ================================================================================
--- Tech Innovators Inc channels
-INSERT INTO channels (workspace_id, name, description, created_at, updated_at) VALUES
-(1, 'general', 'General team discussions', NOW() - INTERVAL '85 days', NOW()),
-(1, 'engineering', 'Engineering team chat', NOW() - INTERVAL '80 days', NOW()),
-(1, 'product-updates', 'Product announcements', NOW() - INTERVAL '75 days', NOW()),
+-- Tech Innovators Inc channels (no updated_at column)
+INSERT INTO channels (workspace_id, name, description, created_at) VALUES
+(1, 'general', 'General team discussions', NOW() - INTERVAL '85 days'),
+(1, 'engineering', 'Engineering team chat', NOW() - INTERVAL '80 days'),
+(1, 'product-updates', 'Product announcements', NOW() - INTERVAL '75 days'),
 
 -- Marketing Wizards channels
-(2, 'general', 'Marketing team general chat', NOW() - INTERVAL '70 days', NOW()),
-(2, 'campaigns', 'Marketing campaign planning', NOW() - INTERVAL '65 days', NOW()),
-(2, 'social-media', 'Social media discussions', NOW() - INTERVAL '60 days', NOW()),
+(2, 'general-marketing', 'Marketing team general chat', NOW() - INTERVAL '70 days'),
+(2, 'campaigns', 'Marketing campaign planning', NOW() - INTERVAL '65 days'),
+(2, 'social-media', 'Social media discussions', NOW() - INTERVAL '60 days'),
 
 -- Product Squad channels
-(3, 'general', 'Product team discussions', NOW() - INTERVAL '60 days', NOW()),
-(3, 'design', 'Design feedback and reviews', NOW() - INTERVAL '55 days', NOW()),
-(3, 'user-research', 'User research findings', NOW() - INTERVAL '50 days', NOW()),
+(3, 'general-product', 'Product team discussions', NOW() - INTERVAL '60 days'),
+(3, 'design', 'Design feedback and reviews', NOW() - INTERVAL '55 days'),
+(3, 'user-research', 'User research findings', NOW() - INTERVAL '50 days'),
 
 -- Sales Champions channels
-(4, 'general', 'Sales team chat', NOW() - INTERVAL '50 days', NOW()),
-(4, 'deals', 'Deal pipeline discussions', NOW() - INTERVAL '45 days', NOW()),
+(4, 'general-sales', 'Sales team chat', NOW() - INTERVAL '50 days'),
+(4, 'deals', 'Deal pipeline discussions', NOW() - INTERVAL '45 days'),
 
 -- Customer Success Hub channels
-(5, 'general', 'Customer success discussions', NOW() - INTERVAL '40 days', NOW()),
-(5, 'escalations', 'Customer escalations', NOW() - INTERVAL '35 days', NOW()),
-(5, 'feedback', 'Customer feedback', NOW() - INTERVAL '30 days', NOW());
+(5, 'general-support', 'Customer success discussions', NOW() - INTERVAL '40 days'),
+(5, 'escalations', 'Customer escalations', NOW() - INTERVAL '35 days'),
+(5, 'feedback', 'Customer feedback', NOW() - INTERVAL '30 days');
 
 -- ================================================================================
 -- MESSAGES (500+ messages with varying patterns)
@@ -130,7 +130,7 @@ INSERT INTO channels (workspace_id, name, description, created_at, updated_at) V
 -- Generate messages across different time periods to show activity trends
 
 -- Recent activity (last 7 days) - High volume
-INSERT INTO messages (channel_id, sender_id, content, type, created_at)
+INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
     (RANDOM() * 14 + 1)::INT as channel_id,
     (RANDOM() * 20 + 1)::INT as sender_id,
@@ -147,26 +147,29 @@ SELECT
         ELSE 'Sounds good!'
     END as content,
     'TEXT' as type,
+    0 as reply_count,
     NOW() - (RANDOM() * INTERVAL '7 days') as created_at
 FROM generate_series(1, 200);
 
 -- Medium activity (8-30 days ago)
-INSERT INTO messages (channel_id, sender_id, content, type, created_at)
+INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
     (RANDOM() * 14 + 1)::INT,
     (RANDOM() * 20 + 1)::INT,
     'Message from ' || ((RANDOM() * 30 + 8)::INT) || ' days ago',
     'TEXT',
+    0,
     NOW() - ((RANDOM() * 22 + 8) * INTERVAL '1 day')
 FROM generate_series(1, 150);
 
 -- Historical data (31-90 days ago)
-INSERT INTO messages (channel_id, sender_id, content, type, created_at)
+INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
     (RANDOM() * 14 + 1)::INT,
     (RANDOM() * 20 + 1)::INT,
     'Historical message',
     'TEXT',
+    0,
     NOW() - ((RANDOM() * 60 + 30) * INTERVAL '1 day')
 FROM generate_series(1, 200);
 
@@ -176,36 +179,37 @@ FROM generate_series(1, 200);
 INSERT INTO direct_messages (sender_id, recipient_id, content, type, created_at)
 SELECT
     (RANDOM() * 19 + 1)::INT as sender_id,
-    (RANDOM() * 19 + 1)::INT + 1 as recipient_id,
+    CASE
+        WHEN (RANDOM() * 19 + 1)::INT = (RANDOM() * 19 + 1)::INT
+        THEN (RANDOM() * 19 + 1)::INT
+        ELSE (RANDOM() * 19 + 1)::INT
+    END as recipient_id,
     'Direct message: ' || generate_series,
     'TEXT',
     NOW() - (RANDOM() * INTERVAL '60 days')
-FROM generate_series(1, 100);
+FROM generate_series(1, 100)
+WHERE (RANDOM() * 19 + 1)::INT <= 20;
 
 -- ================================================================================
 -- REACTIONS (300 reactions on messages)
+-- Reactions table uses 'type' column with CHECK constraint (only 'THUMBS_UP' allowed)
 -- ================================================================================
-INSERT INTO reactions (message_id, user_id, emoji, created_at)
+INSERT INTO reactions (message_id, user_id, type)
 SELECT
-    (RANDOM() * 549 + 1)::INT as message_id,
+    m.id as message_id,
     (RANDOM() * 20 + 1)::INT as user_id,
-    CASE (RANDOM() * 5)::INT
-        WHEN 0 THEN '👍'
-        WHEN 1 THEN '❤️'
-        WHEN 2 THEN '😂'
-        WHEN 3 THEN '🎉'
-        WHEN 4 THEN '🚀'
-        ELSE '👏'
-    END as emoji,
-    NOW() - (RANDOM() * INTERVAL '60 days')
-FROM generate_series(1, 300);
+    'THUMBS_UP' as type
+FROM messages m
+ORDER BY RANDOM()
+LIMIT 300
+ON CONFLICT (message_id, user_id) DO NOTHING;
 
 -- ================================================================================
 -- NOTIFICATIONS (200 notifications)
 -- ================================================================================
 INSERT INTO notifications (user_id, type, message, is_read, channel_id, message_id, created_at)
 SELECT
-    (RANDOM() * 20 + 1)::INT as user_id,
+    (RANDOM() * 19 + 1)::INT as user_id,
     CASE (RANDOM() * 4)::INT
         WHEN 0 THEN 'CHANNEL_MESSAGE'
         WHEN 1 THEN 'DIRECT_MESSAGE'
@@ -215,10 +219,12 @@ SELECT
     END::VARCHAR as type,
     'You have a new notification',
     RANDOM() > 0.3 as is_read,
-    (RANDOM() * 14 + 1)::INT as channel_id,
-    (RANDOM() * 549 + 1)::INT as message_id,
+    (RANDOM() * 13 + 1)::INT as channel_id,
+    m.id as message_id,
     NOW() - (RANDOM() * INTERVAL '60 days')
-FROM generate_series(1, 200);
+FROM messages m
+ORDER BY RANDOM()
+LIMIT 200;
 
 -- Print summary
 SELECT 'Mock data loaded successfully!' as status;
