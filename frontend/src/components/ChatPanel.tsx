@@ -295,7 +295,7 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
         </>
       )}
 
-      {channel && <TypingIndicator typingUsers={typingUsers} />}
+      <TypingIndicator typingUsers={typingUsers} />
 
       <MessageInput onSendMessage={handleSendMessage} onTyping={handleTyping} />
     </div>
