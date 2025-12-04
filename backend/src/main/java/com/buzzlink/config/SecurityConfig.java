@@ -36,6 +36,9 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll() // Allow H2 console for dev
                         .requestMatchers("/actuator/**").permitAll() // Allow actuator endpoints
                         .requestMatchers("/api/**").permitAll() // For demo, allow all API access
+                        .requestMatchers("/dashboard.html").permitAll() // Allow dashboard access
+                        .requestMatchers("/static/**").permitAll() // Allow static resources
+                        .requestMatchers("/*.html").permitAll() // Allow HTML files
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable())); // For H2 console
 
