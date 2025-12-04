@@ -24,6 +24,12 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     List<Channel> findByWorkspaceId(@Param("workspaceId") Long workspaceId);
 
     /**
+     * Find all channels by workspace entity
+     */
+    @Query("SELECT c FROM Channel c WHERE c.workspace = :workspace")
+    List<Channel> findByWorkspace(@Param("workspace") com.buzzlink.entity.Workspace workspace);
+
+    /**
      * Find channel by name within a workspace
      */
     @Query("SELECT c FROM Channel c WHERE c.name = :name AND c.workspace.id = :workspaceId")
