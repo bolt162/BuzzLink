@@ -171,7 +171,7 @@ public class WebSocketController {
     /**
      * Handle sending direct messages
      * Client sends to: /app/dm.send
-     * Sends to: /queue/user.{recipientClerkId}
+     * Broadcasts to: /topic/dm.{clerkId} for both sender and recipient
      */
     @MessageMapping("/dm.send")
     public void sendDirectMessage(@Payload SendDirectMessageRequest request) {
@@ -185,17 +185,20 @@ public class WebSocketController {
                     request.content(),
                     request.type());
 
-            // Send to recipient's personal queue
-            messagingTemplate.convertAndSendToUser(
-                    dm.recipient().getClerkId(),
-                    "/queue/messages",
+            log.info("Saved DM with ID: {}, broadcasting to sender {} and recipient {}",
+                    dm.id(), dm.sender().getClerkId(), dm.recipient().getClerkId());
+
+            // Send to recipient's personal topic
+            messagingTemplate.convertAndSend(
+                    "/topic/dm." + dm.recipient().getClerkId(),
                     dm);
+            log.debug("Sent DM to recipient topic: /topic/dm.{}", dm.recipient().getClerkId());
 
             // Also send back to sender for confirmation
-            messagingTemplate.convertAndSendToUser(
-                    request.senderClerkId(),
-                    "/queue/messages",
+            messagingTemplate.convertAndSend(
+                    "/topic/dm." + dm.sender().getClerkId(),
                     dm);
+            log.debug("Sent DM to sender topic: /topic/dm.{}", dm.sender().getClerkId());
 
             // Create notification for DM
             try {
@@ -216,7 +219,7 @@ public class WebSocketController {
     /**
      * Handle DM typing indicators
      * Client sends to: /app/dm.typing
-     * Sends to: /queue/typing for the recipient
+     * Broadcasts to: /topic/dm.{recipientClerkId}.typing
      */
     @MessageMapping("/dm.typing")
     public void handleDMTyping(@Payload DMTypingRequest request) {
@@ -231,14 +234,13 @@ public class WebSocketController {
                     request.isTyping()
             );
 
-            // Send to recipient's personal typing queue
-            messagingTemplate.convertAndSendToUser(
-                    request.recipientClerkId(),
-                    "/queue/typing",
+            // Send to recipient's personal DM typing topic
+            messagingTemplate.convertAndSend(
+                    "/topic/dm." + request.recipientClerkId() + ".typing",
                     typingEvent
             );
 
-            log.debug("Sent DM typing event to user {}", request.recipientClerkId());
+            log.debug("Sent DM typing event to topic: /topic/dm.{}.typing", request.recipientClerkId());
         } catch (Exception e) {
             log.error("Error handling DM typing: {}", e.getMessage(), e);
         }

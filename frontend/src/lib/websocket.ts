@@ -148,8 +148,11 @@ export class WebSocketClient {
 
     this.onDirectMessageCallback = onDirectMessage;
 
-    // Subscribe to user's personal queue for DMs
-    this.client.subscribe(`/user/queue/messages`, (message) => {
+    // Subscribe to user's personal DM topic
+    const dmTopic = `/topic/dm.${this.clerkId}`;
+    console.log('Subscribing to DM topic:', dmTopic);
+
+    this.client.subscribe(dmTopic, (message) => {
       const dm = JSON.parse(message.body);
       console.log('WebSocket: Received DM via WebSocket:', dm);
       onDirectMessage(dm);
@@ -179,8 +182,11 @@ export class WebSocketClient {
       return;
     }
 
-    // Subscribe to DM typing indicators
-    this.client.subscribe(`/user/queue/typing`, (message) => {
+    // Subscribe to DM typing indicators on user's personal typing topic
+    const typingTopic = `/topic/dm.${this.clerkId}.typing`;
+    console.log('Subscribing to DM typing topic:', typingTopic);
+
+    this.client.subscribe(typingTopic, (message) => {
       const typingEvent = JSON.parse(message.body);
       console.log('WebSocket: Received DM typing event:', typingEvent);
       onTyping(typingEvent);
