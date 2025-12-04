@@ -102,7 +102,7 @@ sudo apt-get install odbc-postgresql
 ### Connection Details
 
 Enter the following:
-- **Server**: `184.169.147.113` (your EC2 IP) or `localhost` if running locally
+- **Server**: `184.169.147.113:5432` (your EC2 IP with port) or `localhost` if running locally
 - **Database**: `buzzlink`
 - **Data Connectivity mode**: **Import** (recommended for better performance)
 
@@ -112,8 +112,8 @@ Click **OK**
 
 1. Select **Database** tab
 2. Enter:
-   - **User name**: `postgres`
-   - **Password**: `MrRobot2024!` (from your `.env` file)
+   - **User name**: `buzzlink_user`
+   - **Password**: `MrRobot2024!` (from your `.env` file - check with `cat .env | grep POSTGRES_PASSWORD`)
 3. Click **Connect**
 
 ### Load Tables
