@@ -92,19 +92,29 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
     };
 
     const handleTyping = (event: TypingEvent) => {
-      if (event.clerkId === user.id) return; // Ignore own typing
+      console.log('Typing event received:', event);
+      console.log('Current user.id:', user.id);
+      console.log('Are they equal?', event.clerkId === user.id);
+
+      if (event.clerkId === user.id) {
+        console.log('Ignoring own typing event');
+        return; // Ignore own typing
+      }
 
       const timeout = typingTimeoutsRef.current.get(event.clerkId);
       if (timeout) clearTimeout(timeout);
 
       if (event.isTyping) {
+        console.log(`Adding ${event.displayName} to typing users`);
         setTypingUsers((prev) => {
           const next = new Map(prev);
           next.set(event.clerkId, event.displayName);
+          console.log('Updated typing users map:', Array.from(next.entries()));
           return next;
         });
 
         const newTimeout = setTimeout(() => {
+          console.log(`Removing ${event.displayName} from typing users (timeout)`);
           setTypingUsers((prev) => {
             const next = new Map(prev);
             next.delete(event.clerkId);
@@ -114,6 +124,7 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
 
         typingTimeoutsRef.current.set(event.clerkId, newTimeout);
       } else {
+        console.log(`Removing ${event.displayName} from typing users (stopped typing)`);
         setTypingUsers((prev) => {
           const next = new Map(prev);
           next.delete(event.clerkId);

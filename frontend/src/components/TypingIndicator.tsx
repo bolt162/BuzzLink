@@ -11,8 +11,13 @@ export default function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    console.log('TypingIndicator - typingUsers changed:', typingUsers);
+    console.log('TypingIndicator - size:', typingUsers.size);
+    console.log('TypingIndicator - entries:', Array.from(typingUsers.entries()));
     setVisible(typingUsers.size > 0);
   }, [typingUsers]);
+
+  console.log('TypingIndicator render - visible:', visible, 'typingUsers.size:', typingUsers.size);
 
   if (!visible) return null;
 
