@@ -29,7 +29,7 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const selectedThreadRef = useRef<Message | null>(null);
 
-  const { connected, subscribeToChannel, sendMessage, sendDirectMessage, sendTyping, leaveChannel, subscribeToDMs } = useWebSocket(
+  const { connected, subscribeToChannel, sendMessage, sendDirectMessage, sendTyping, leaveChannel, subscribeToDMs, sendDMTyping, subscribeToDMTyping } = useWebSocket(
     user?.id || null
   );
 
@@ -171,8 +171,14 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
     if (!connected || !user) return;
 
     const handleNewDM = (dm: DirectMessage) => {
+      console.log('ChatPanel: Received new DM:', dm);
+      console.log('Current conversation:', conversation);
+
       // Only add DM if it's part of the current conversation
-      if (!conversation) return;
+      if (!conversation) {
+        console.log('No active conversation, ignoring DM');
+        return;
+      }
 
       // Check if this DM is between the current user and the conversation partner
       // The DM is sent to both sender and recipient, so we need to check if either
@@ -181,17 +187,66 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
         dm.sender.id === conversation.otherUser.id ||
         dm.recipient.id === conversation.otherUser.id;
 
+      console.log('Is part of current conversation?', isPartOfConversation);
+
       if (isPartOfConversation) {
         setDmMessages((prev) => {
           // Avoid duplicates
-          if (prev.some(msg => msg.id === dm.id)) return prev;
+          if (prev.some(msg => msg.id === dm.id)) {
+            console.log('DM already in list, skipping');
+            return prev;
+          }
+          console.log('Adding DM to list');
           return [...prev, dm];
         });
       }
     };
 
+    const handleDMTyping = (event: TypingEvent) => {
+      console.log('ChatPanel: DM typing event received:', event);
+      console.log('Current user.id:', user.id);
+      console.log('Are they equal?', event.clerkId === user.id);
+
+      if (event.clerkId === user.id) {
+        console.log('Ignoring own DM typing event');
+        return;
+      }
+
+      const timeout = typingTimeoutsRef.current.get(event.clerkId);
+      if (timeout) clearTimeout(timeout);
+
+      if (event.isTyping) {
+        console.log(`Adding ${event.displayName} to DM typing users`);
+        setTypingUsers((prev) => {
+          const next = new Map(prev);
+          next.set(event.clerkId, event.displayName);
+          console.log('Updated DM typing users map:', Array.from(next.entries()));
+          return next;
+        });
+
+        const newTimeout = setTimeout(() => {
+          console.log(`Removing ${event.displayName} from DM typing users (timeout)`);
+          setTypingUsers((prev) => {
+            const next = new Map(prev);
+            next.delete(event.clerkId);
+            return next;
+          });
+        }, 3000);
+
+        typingTimeoutsRef.current.set(event.clerkId, newTimeout);
+      } else {
+        console.log(`Removing ${event.displayName} from DM typing users (stopped typing)`);
+        setTypingUsers((prev) => {
+          const next = new Map(prev);
+          next.delete(event.clerkId);
+          return next;
+        });
+      }
+    };
+
     subscribeToDMs(handleNewDM);
-  }, [connected, user, conversation, subscribeToDMs]);
+    subscribeToDMTyping(handleDMTyping);
+  }, [connected, user, conversation, subscribeToDMs, subscribeToDMTyping]);
 
   const handleSendMessage = (content: string, type: 'TEXT' | 'FILE') => {
     if (channel) {
@@ -202,8 +257,16 @@ export default function ChatPanel({ channel, conversation }: ChatPanelProps) {
   };
 
   const handleTyping = (isTyping: boolean) => {
-    if (!channel || !user) return;
-    sendTyping(channel.id, user.fullName || user.username || 'User', isTyping);
+    if (!user) return;
+
+    if (channel) {
+      // Send channel typing event
+      sendTyping(channel.id, user.fullName || user.username || 'User', isTyping);
+    } else if (conversation) {
+      // Send DM typing event
+      console.log('Sending DM typing event:', isTyping, 'to:', conversation.otherUser.clerkId);
+      sendDMTyping(conversation.otherUser.clerkId, user.fullName || user.username || 'User', isTyping);
+    }
   };
 
   const handleMessageDeleted = (messageId: number) => {

@@ -151,7 +151,39 @@ export class WebSocketClient {
     // Subscribe to user's personal queue for DMs
     this.client.subscribe(`/user/queue/messages`, (message) => {
       const dm = JSON.parse(message.body);
+      console.log('WebSocket: Received DM via WebSocket:', dm);
       onDirectMessage(dm);
+    });
+  }
+
+  sendDMTyping(recipientClerkId: string, displayName: string, isTyping: boolean) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    this.client.publish({
+      destination: '/app/dm.typing',
+      body: JSON.stringify({
+        senderClerkId: this.clerkId,
+        recipientClerkId,
+        displayName,
+        isTyping,
+      }),
+    });
+  }
+
+  subscribeToDMTyping(onTyping: (event: TypingEvent) => void) {
+    if (!this.client) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    // Subscribe to DM typing indicators
+    this.client.subscribe(`/user/queue/typing`, (message) => {
+      const typingEvent = JSON.parse(message.body);
+      console.log('WebSocket: Received DM typing event:', typingEvent);
+      onTyping(typingEvent);
     });
   }
 

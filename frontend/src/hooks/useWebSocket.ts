@@ -72,6 +72,18 @@ export const useWebSocket = (clerkId: string | null) => {
     }
   };
 
+  const sendDMTyping = (recipientClerkId: string, displayName: string, isTyping: boolean) => {
+    if (clientRef.current) {
+      clientRef.current.sendDMTyping(recipientClerkId, displayName, isTyping);
+    }
+  };
+
+  const subscribeToDMTyping = (onTyping: (event: TypingEvent) => void) => {
+    if (clientRef.current) {
+      clientRef.current.subscribeToDMTyping(onTyping);
+    }
+  };
+
   return {
     connected,
     subscribeToChannel,
@@ -81,5 +93,7 @@ export const useWebSocket = (clerkId: string | null) => {
     subscribeToDMs,
     sendDirectMessage,
     subscribeToNotifications,
+    sendDMTyping,
+    subscribeToDMTyping,
   };
 };

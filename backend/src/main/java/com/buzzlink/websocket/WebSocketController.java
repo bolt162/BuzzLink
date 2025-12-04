@@ -214,6 +214,37 @@ public class WebSocketController {
     }
 
     /**
+     * Handle DM typing indicators
+     * Client sends to: /app/dm.typing
+     * Sends to: /queue/typing for the recipient
+     */
+    @MessageMapping("/dm.typing")
+    public void handleDMTyping(@Payload DMTypingRequest request) {
+        log.info("Received DM typing from {} to {}: {}", request.senderClerkId(), request.recipientClerkId(), request.isTyping());
+
+        try {
+            // Create typing event
+            TypingEvent typingEvent = new TypingEvent(
+                    null, // channelId is null for DMs
+                    request.senderClerkId(),
+                    request.displayName(),
+                    request.isTyping()
+            );
+
+            // Send to recipient's personal typing queue
+            messagingTemplate.convertAndSendToUser(
+                    request.recipientClerkId(),
+                    "/queue/typing",
+                    typingEvent
+            );
+
+            log.debug("Sent DM typing event to user {}", request.recipientClerkId());
+        } catch (Exception e) {
+            log.error("Error handling DM typing: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * Request records
      */
     public record SendMessageRequest(Long channelId, String clerkId, String content, String type,
@@ -227,5 +258,8 @@ public class WebSocketController {
     }
 
     public record LeaveChannelRequest(Long channelId, String clerkId) {
+    }
+
+    public record DMTypingRequest(String senderClerkId, String recipientClerkId, String displayName, boolean isTyping) {
     }
 }
