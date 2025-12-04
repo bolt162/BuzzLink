@@ -20,12 +20,12 @@ export default async function Home() {
             </div>
             <p className="text-center text-gray-600 mb-8">Enterprise Chat Application</p>
             <div className="space-y-4">
-              <SignInButton mode="modal">
+              <SignInButton mode="redirect" forceRedirectUrl="/chat">
                 <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
                   Sign In
                 </button>
               </SignInButton>
-              <SignUpButton mode="modal">
+              <SignUpButton mode="redirect" forceRedirectUrl="/chat">
                 <button className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
                   Sign Up
                 </button>
