@@ -31,7 +31,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Disabled for demo; in production, use proper CSRF protection
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/ws/**").permitAll() // Allow WebSocket connections
-                        .requestMatchers("/info").permitAll() // Allow SockJS info endpoint
+                        .requestMatchers("/info**").permitAll() // Allow SockJS info endpoint with query params
+                        .requestMatchers("/sockjs/**").permitAll() // Allow all SockJS endpoints
                         .requestMatchers("/h2-console/**").permitAll() // Allow H2 console for dev
                         .requestMatchers("/actuator/**").permitAll() // Allow actuator endpoints
                         .requestMatchers("/api/**").permitAll() // For demo, allow all API access
