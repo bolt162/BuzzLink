@@ -132,8 +132,8 @@ INSERT INTO channels (workspace_id, name, description, created_at) VALUES
 -- Recent activity (last 7 days) - High volume
 INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
-    (RANDOM() * 14 + 1)::INT as channel_id,
-    (RANDOM() * 20 + 1)::INT as sender_id,
+    (RANDOM() * 13 + 1)::INT as channel_id,
+    (RANDOM() * 19 + 1)::INT as sender_id,
     CASE (RANDOM() * 10)::INT
         WHEN 0 THEN 'Great work on the latest release!'
         WHEN 1 THEN 'Can someone review my PR?'
@@ -154,8 +154,8 @@ FROM generate_series(1, 200);
 -- Medium activity (8-30 days ago)
 INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
-    (RANDOM() * 14 + 1)::INT,
-    (RANDOM() * 20 + 1)::INT,
+    (RANDOM() * 13 + 1)::INT,
+    (RANDOM() * 19 + 1)::INT,
     'Message from ' || ((RANDOM() * 30 + 8)::INT) || ' days ago',
     'TEXT',
     0,
@@ -165,8 +165,8 @@ FROM generate_series(1, 150);
 -- Historical data (31-90 days ago)
 INSERT INTO messages (channel_id, sender_id, content, type, reply_count, created_at)
 SELECT
-    (RANDOM() * 14 + 1)::INT,
-    (RANDOM() * 20 + 1)::INT,
+    (RANDOM() * 13 + 1)::INT,
+    (RANDOM() * 19 + 1)::INT,
     'Historical message',
     'TEXT',
     0,
@@ -197,7 +197,7 @@ WHERE (RANDOM() * 19 + 1)::INT <= 20;
 INSERT INTO reactions (message_id, user_id, type)
 SELECT
     m.id as message_id,
-    (RANDOM() * 20 + 1)::INT as user_id,
+    (RANDOM() * 19 + 1)::INT as user_id,
     'THUMBS_UP' as type
 FROM messages m
 ORDER BY RANDOM()
