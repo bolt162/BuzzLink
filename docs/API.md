@@ -1,372 +1,65 @@
 # BuzzLink API Documentation
 
-Base URL: `http://localhost:8080`
+> **Interactive Documentation**: See [OpenAPI Specification](openapi.yaml) or view the [Swagger UI Dashboard](swagger-ui.html) for interactive API testing.
+
+## Quick Reference
+
+### 1. Direct Messages (DMs)
+- `GET /api/direct-messages/{recipientClerkId}` - Get DM conversation
+- `POST /api/direct-messages` - Send DM
+- **WebSocket**: `/topic/dm.{clerkId}` - Subscribe to DMs
+- **WebSocket**: `/app/dm.send` - Send DM via WebSocket
+
+### 2. Workspaces
+- `GET /api/workspaces` - List user's workspaces
+- `POST /api/workspaces` - Create workspace
+- `GET /api/workspaces/{id}` - Get workspace details
+- `PUT /api/workspaces/{id}` - Update workspace
+- `DELETE /api/workspaces/{id}` - Delete workspace
+- `GET /api/workspaces/{id}/channels` - Get workspace channels
+- `POST /api/workspaces/{id}/channels` - Create channel in workspace
+- `GET /api/workspaces/{id}/members` - List workspace members
+- `POST /api/workspaces/{id}/members/{userId}/role` - Update member role
+- `DELETE /api/workspaces/{id}/members/{userId}` - Remove member
+
+### 3. Workspace Invitations
+- `POST /api/workspaces/{id}/invitations` - Send invitation
+- `GET /api/invitations` - List user's invitations
+- `POST /api/invitations/{token}/accept` - Accept invitation
+- `POST /api/invitations/{token}/decline` - Decline invitation
+
+### 4. Notifications
+- `GET /api/notifications` - List user's notifications
+- `PUT /api/notifications/{id}/read` - Mark notification as read
+- `PUT /api/notifications/read-all` - Mark all as read
+- `DELETE /api/notifications/{id}` - Delete notification
+- **WebSocket**: `/topic/notifications.{clerkId}` - Subscribe to notifications
+
+### 5. Message Threading
+- `GET /api/messages/{messageId}/replies` - Get thread replies
+- `POST /api/messages/{messageId}/replies` - Reply to thread
+- Message object includes `parentMessageId` and `replyCount`
+
+### 6. User Management
+- `GET /api/users` - Search/list users
+- `GET /api/users/{clerkId}` - Get user by Clerk ID
+
+### 7. Analytics API
+- `GET /api/analytics/workspace/{workspaceId}/overview` - Workspace stats
+- `GET /api/analytics/workspace/{workspaceId}/activity` - Activity over time
+- `GET /api/analytics/workspace/{workspaceId}/top-users` - Most active users
+- `GET /api/analytics/workspace/{workspaceId}/top-channels` - Most active channels
 
 ## Authentication
 
-All API requests require the `X-Clerk-User-Id` header containing the authenticated user's Clerk ID.
+All API endpoints require authentication using Clerk JWT tokens. Include the token in the Authorization header:
 
 ```
-X-Clerk-User-Id: user_2abc123def456
+Authorization: Bearer <your-clerk-jwt-token>
 ```
 
-## REST API Endpoints
-
-### Channels
-
-#### List All Channels
-
-```
-GET /api/channels
-```
-
-**Response:**
-```json
-[
-  {
-    "id": 1,
-    "name": "general",
-    "description": "General discussion",
-    "createdAt": "2024-01-15T10:30:00"
-  }
-]
-```
-
-#### Get Channel by ID
-
-```
-GET /api/channels/{id}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "name": "general",
-  "description": "General discussion",
-  "createdAt": "2024-01-15T10:30:00"
-}
-```
-
-#### Create Channel
-
-```
-POST /api/channels
-Content-Type: application/json
-
-{
-  "name": "engineering",
-  "description": "Engineering team discussions"
-}
-```
-
-### Messages
-
-#### Get Channel Messages
-
-```
-GET /api/channels/{channelId}/messages?limit=50
-```
-
-**Query Parameters:**
-- `limit` (optional, default: 50) - Number of recent messages to return
-
-**Response:**
-```json
-[
-  {
-    "id": 123,
-    "channelId": 1,
-    "sender": {
-      "id": 1,
-      "clerkId": "user_2abc123",
-      "displayName": "John Doe",
-      "avatarUrl": "https://...",
-      "isAdmin": false
-    },
-    "content": "Hello everyone!",
-    "type": "TEXT",
-    "createdAt": "2024-01-15T14:30:00",
-    "reactionCount": 3
-  }
-]
-```
-
-#### Delete Message (Admin Only)
-
-```
-DELETE /api/messages/{messageId}
-X-Clerk-User-Id: user_2abc123
-```
-
-**Response:** `204 No Content` on success, `403 Forbidden` if not admin
-
-#### Toggle Reaction
-
-```
-POST /api/messages/{messageId}/reactions
-X-Clerk-User-Id: user_2abc123
-```
-
-**Response:**
-```json
-{
-  "count": 4
-}
-```
-
-### Users
-
-#### Sync User
-
-Called automatically on login to create or update user in database.
-
-```
-POST /api/users/sync
-Content-Type: application/json
-
-{
-  "clerkId": "user_2abc123",
-  "displayName": "John Doe",
-  "email": "john@example.com",
-  "avatarUrl": "https://..."
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "clerkId": "user_2abc123",
-  "displayName": "John Doe",
-  "avatarUrl": "https://...",
-  "isAdmin": false,
-  "email": "john@example.com"
-}
-```
-
-#### Get Current User
-
-```
-GET /api/users/me
-X-Clerk-User-Id: user_2abc123
-```
-
-#### Update Profile
-
-```
-PUT /api/users/me
-X-Clerk-User-Id: user_2abc123
-Content-Type: application/json
-
-{
-  "displayName": "John Smith",
-  "avatarUrl": "https://..."
-}
-```
-
-#### Make User Admin (Demo Only)
-
-```
-POST /api/users/make-admin
-Content-Type: application/json
-
-{
-  "clerkId": "user_2abc123",
-  "isAdmin": true
-}
-```
-
-## WebSocket API
-
-### Connection
-
-Connect to: `ws://localhost:8080/ws` using SockJS + STOMP
-
-**JavaScript Example:**
-```javascript
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
-
-const socket = new SockJS('http://localhost:8080/ws');
-const client = new Client({
-  webSocketFactory: () => socket,
-  reconnectDelay: 5000
-});
-
-client.onConnect = () => {
-  console.log('Connected');
-};
-
-client.activate();
-```
-
-### Subscribe to Topics
-
-#### Channel Messages
-
-Subscribe to receive new messages in a channel:
-
-```javascript
-client.subscribe('/topic/channel.1', (message) => {
-  const chatMessage = JSON.parse(message.body);
-  console.log('New message:', chatMessage);
-});
-```
-
-**Message Format:**
-```json
-{
-  "id": 123,
-  "channelId": 1,
-  "sender": { ... },
-  "content": "Hello!",
-  "type": "TEXT",
-  "createdAt": "2024-01-15T14:30:00",
-  "reactionCount": 0
-}
-```
-
-#### Typing Indicators
-
-Subscribe to typing events:
-
-```javascript
-client.subscribe('/topic/channel.1.typing', (message) => {
-  const event = JSON.parse(message.body);
-  console.log('Typing:', event);
-});
-```
-
-**Event Format:**
-```json
-{
-  "channelId": 1,
-  "clerkId": "user_2abc123",
-  "displayName": "John Doe",
-  "isTyping": true
-}
-```
-
-#### Presence Updates
-
-Subscribe to online user updates:
-
-```javascript
-client.subscribe('/topic/channel.1.presence', (message) => {
-  const event = JSON.parse(message.body);
-  console.log('Online users:', event.onlineCount);
-});
-```
-
-**Event Format:**
-```json
-{
-  "channelId": 1,
-  "onlineUsers": ["user_1", "user_2"],
-  "onlineCount": 2
-}
-```
-
-### Send Messages
-
-#### Send Chat Message
-
-```javascript
-client.publish({
-  destination: '/app/chat.sendMessage',
-  body: JSON.stringify({
-    channelId: 1,
-    clerkId: 'user_2abc123',
-    content: 'Hello everyone!',
-    type: 'TEXT'
-  })
-});
-```
-
-#### Send Typing Indicator
-
-```javascript
-client.publish({
-  destination: '/app/chat.typing',
-  body: JSON.stringify({
-    channelId: 1,
-    clerkId: 'user_2abc123',
-    displayName: 'John Doe',
-    isTyping: true
-  })
-});
-```
-
-#### Join Channel
-
-```javascript
-client.publish({
-  destination: '/app/chat.join',
-  body: JSON.stringify({
-    channelId: 1,
-    clerkId: 'user_2abc123'
-  })
-});
-```
-
-#### Leave Channel
-
-```javascript
-client.publish({
-  destination: '/app/chat.leave',
-  body: JSON.stringify({
-    channelId: 1,
-    clerkId: 'user_2abc123'
-  })
-});
-```
-
-## Error Responses
-
-All endpoints may return error responses:
-
-**400 Bad Request:**
-```json
-{
-  "error": "Invalid request",
-  "message": "Channel name is required"
-}
-```
-
-**403 Forbidden:**
-```json
-{
-  "error": "Forbidden",
-  "message": "Only admins can delete messages"
-}
-```
-
-**404 Not Found:**
-```json
-{
-  "error": "Not found",
-  "message": "Channel not found"
-}
-```
-
-**500 Internal Server Error:**
-```json
-{
-  "error": "Internal server error",
-  "message": "An unexpected error occurred"
-}
-```
-
-## Rate Limiting
-
-In production, the following rate limits would apply:
-- REST API: 100 requests per minute per user
-- WebSocket messages: 60 messages per minute per connection
-- Typing events: 10 per minute per user
-
-## CORS
-
-The backend allows CORS requests from `http://localhost:3000` in development.
-
-In production, this should be configured to allow requests only from the deployed frontend domain.
+## Resources
+
+- **OpenAPI Spec**: [openapi.yaml](openapi.yaml)
+- **Interactive Docs**: [swagger-ui.html](swagger-ui.html)
+- **Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)

@@ -2,287 +2,233 @@ pipeline {
     agent any
 
     environment {
-        // Environment variables
-        BACKEND_DIR = 'backend'
-        FRONTEND_DIR = 'frontend'
-        DOCKER_REGISTRY = 'your-registry.com'
-        APP_NAME = 'buzzlink'
+        // Docker configuration
+        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
 
-        // Credentials (would be stored in Jenkins)
-        DOCKER_CREDENTIALS = credentials('docker-registry-credentials')
-        CLERK_CREDENTIALS = credentials('clerk-api-keys')
+        // EC2 configuration
+        EC2_HOST = '184.169.147.113'
+        EC2_USER = 'ubuntu'
+        EC2_PROJECT_PATH = '/home/ubuntu/BuzzLink'
+
+        // SSH credentials (configure in Jenkins)
+        SSH_CREDENTIALS_ID = 'buzzlink-ec2-ssh-key'
+
+        // Notification settings
+        SLACK_CHANNEL = '#deployments' // Optional: configure if using Slack
+    }
+
+    options {
+        // Keep last 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+
+        // Timeout for the entire pipeline
+        timeout(time: 30, unit: 'MINUTES')
+
+        // Disable concurrent builds
+        disableConcurrentBuilds()
+    }
+
+    triggers {
+        // Poll GitHub for changes every 2 minutes (can be replaced with webhooks)
+        pollSCM('H/2 * * * *')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out source code from Git...'
+                echo 'Checking out code from GitHub...'
                 checkout scm
 
-                // Display build information
-                sh 'git rev-parse --short HEAD > .git/commit-hash'
                 script {
-                    env.GIT_COMMIT_HASH = readFile('.git/commit-hash').trim()
+                    // Get commit information
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
                 }
-                echo "Building commit: ${env.GIT_COMMIT_HASH}"
+
+                echo "Commit: ${env.GIT_COMMIT_MSG}"
+                echo "Author: ${env.GIT_AUTHOR}"
             }
         }
 
-        stage('Build Backend') {
+        stage('Build Check') {
             steps {
-                echo 'Building Spring Boot backend...'
-                dir(BACKEND_DIR) {
-                    // Clean and build with Gradle
-                    sh './gradlew clean build -x test'
+                echo 'Running build validation...'
 
-                    echo 'Backend build successful!'
-                }
-            }
-        }
-
-        stage('Test Backend') {
-            steps {
-                echo 'Running backend unit tests...'
-                dir(BACKEND_DIR) {
-                    sh './gradlew test'
-
-                    // Publish test results
-                    junit '**/build/test-results/test/*.xml'
-
-                    // Publish code coverage (if JaCoCo is configured)
-                    // jacoco execPattern: '**/build/jacoco/*.exec'
-                }
-            }
-        }
-
-        stage('Backend Code Quality') {
-            steps {
-                echo 'Running SonarQube analysis...'
-                dir(BACKEND_DIR) {
-                    // In production, would run SonarQube scanner
-                    // sh './gradlew sonarqube'
-                    echo 'Code quality checks passed (stub)'
-                }
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                echo 'Building Next.js frontend...'
-                dir(FRONTEND_DIR) {
-                    // Install dependencies
-                    sh 'npm ci'
-
-                    // Run linting
-                    sh 'npm run lint'
-
-                    // Build production bundle
-                    sh 'npm run build'
-
-                    echo 'Frontend build successful!'
-                }
-            }
-        }
-
-        stage('Run Frontend Tests') {
-            steps {
-                echo 'Running frontend tests...'
-                dir(FRONTEND_DIR) {
-                    // Would run Jest/Vitest tests
-                    // sh 'npm test'
-                    echo 'Frontend tests passed (stub)'
-                }
-            }
-        }
-
-        stage('Build Docker Images') {
-            parallel {
-                stage('Build Backend Image') {
-                    steps {
-                        echo 'Building backend Docker image...'
-                        dir(BACKEND_DIR) {
-                            script {
-                                // Build Docker image
-                                def backendImage = docker.build(
-                                    "${DOCKER_REGISTRY}/${APP_NAME}-backend:${env.GIT_COMMIT_HASH}"
-                                )
-
-                                // Tag as latest
-                                backendImage.tag('latest')
-
-                                echo "Backend image built: ${DOCKER_REGISTRY}/${APP_NAME}-backend:${env.GIT_COMMIT_HASH}"
-                            }
-                        }
-                    }
-                }
-
-                stage('Build Frontend Image') {
-                    steps {
-                        echo 'Building frontend Docker image...'
-                        dir(FRONTEND_DIR) {
-                            script {
-                                // Build Docker image
-                                def frontendImage = docker.build(
-                                    "${DOCKER_REGISTRY}/${APP_NAME}-frontend:${env.GIT_COMMIT_HASH}"
-                                )
-
-                                // Tag as latest
-                                frontendImage.tag('latest')
-
-                                echo "Frontend image built: ${DOCKER_REGISTRY}/${APP_NAME}-frontend:${env.GIT_COMMIT_HASH}"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Security Scanning') {
-            parallel {
-                stage('Dependency Check') {
-                    steps {
-                        echo 'Scanning for vulnerable dependencies...'
-                        // Would use OWASP Dependency-Check or Snyk
-                        echo 'Dependency scan completed (stub)'
-                    }
-                }
-
-                stage('Container Scan') {
-                    steps {
-                        echo 'Scanning Docker images for vulnerabilities...'
-                        // Would use Trivy, Clair, or Anchore
-                        echo 'Container scan completed (stub)'
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Images') {
-            when {
-                branch 'main'
-            }
-            steps {
-                echo 'Pushing Docker images to registry...'
+                // Optional: Run tests locally before deploying
                 script {
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-registry-credentials') {
-                        // Push backend
-                        docker.image("${DOCKER_REGISTRY}/${APP_NAME}-backend:${env.GIT_COMMIT_HASH}").push()
-                        docker.image("${DOCKER_REGISTRY}/${APP_NAME}-backend:latest").push()
+                    def backendExists = fileExists('backend/build.gradle')
+                    def frontendExists = fileExists('frontend/package.json')
 
-                        // Push frontend
-                        docker.image("${DOCKER_REGISTRY}/${APP_NAME}-frontend:${env.GIT_COMMIT_HASH}").push()
-                        docker.image("${DOCKER_REGISTRY}/${APP_NAME}-frontend:latest").push()
+                    if (!backendExists || !frontendExists) {
+                        error('Project structure validation failed')
                     }
                 }
-                echo 'Images pushed successfully!'
             }
         }
 
-        stage('Deploy to Staging') {
-            when {
-                branch 'develop'
-            }
+        stage('Deploy to EC2') {
             steps {
-                echo 'Deploying to staging environment...'
+                echo 'Deploying to EC2 instance...'
 
-                // Would deploy to Kubernetes, ECS, or other platform
-                // Example Kubernetes deployment:
-                // sh 'kubectl set image deployment/buzzlink-backend backend=${DOCKER_REGISTRY}/${APP_NAME}-backend:${env.GIT_COMMIT_HASH} -n staging'
-                // sh 'kubectl set image deployment/buzzlink-frontend frontend=${DOCKER_REGISTRY}/${APP_NAME}-frontend:${env.GIT_COMMIT_HASH} -n staging'
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    script {
+                        // Execute deployment script on EC2
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} '
+                                # Navigate to project directory
+                                cd ${env.EC2_PROJECT_PATH}
 
-                echo 'Deployment to staging initiated (stub)'
-            }
-        }
+                                # Pull latest changes
+                                echo "Pulling latest code from GitHub..."
+                                git fetch origin
+                                git reset --hard origin/main
 
-        stage('Deploy to Production') {
-            when {
-                branch 'main'
-            }
-            steps {
-                echo 'Deploying to production environment...'
+                                # Create .env file from environment variables if needed
+                                # echo "Setting up environment variables..."
+                                # This should be configured separately on EC2
 
-                // Require manual approval for production
-                input message: 'Deploy to production?', ok: 'Deploy'
+                                # Stop existing containers
+                                echo "Stopping existing containers..."
+                                docker-compose down
 
-                echo 'Deploying backend...'
-                // sh 'kubectl set image deployment/buzzlink-backend backend=${DOCKER_REGISTRY}/${APP_NAME}-backend:${env.GIT_COMMIT_HASH} -n production'
+                                # Remove old images to force rebuild
+                                echo "Removing old images..."
+                                docker-compose rm -f
 
-                echo 'Deploying frontend...'
-                // sh 'kubectl set image deployment/buzzlink-frontend frontend=${DOCKER_REGISTRY}/${APP_NAME}-frontend:${env.GIT_COMMIT_HASH} -n production'
+                                # Build and start new containers
+                                echo "Building and starting new containers..."
+                                docker-compose up -d --build
 
-                // Wait for rollout
-                // sh 'kubectl rollout status deployment/buzzlink-backend -n production'
-                // sh 'kubectl rollout status deployment/buzzlink-frontend -n production'
+                                # Wait for services to be healthy
+                                echo "Waiting for services to start..."
+                                sleep 30
 
-                echo 'Production deployment completed (stub)'
-            }
-        }
+                                # Check service health
+                                echo "Checking service health..."
+                                docker-compose ps
 
-        stage('Smoke Tests') {
-            when {
-                anyOf {
-                    branch 'main'
-                    branch 'develop'
+                                # Show logs for verification
+                                echo "Recent logs:"
+                                docker-compose logs --tail=50
+                            '
+                        """
+                    }
                 }
             }
+        }
+
+        stage('Health Check') {
             steps {
-                echo 'Running smoke tests...'
+                echo 'Performing health checks...'
 
-                // Health check endpoints
-                // sh 'curl -f http://staging.buzzlink.com/actuator/health'
-                // sh 'curl -f http://staging.buzzlink.com/'
+                script {
+                    // Wait a bit for services to fully start
+                    sleep(time: 10, unit: 'SECONDS')
 
-                echo 'Smoke tests passed (stub)'
+                    // Check backend health
+                    def backendHealthy = sh(
+                        script: "curl -f http://${env.EC2_HOST}:8080/actuator/health || exit 1",
+                        returnStatus: true
+                    ) == 0
+
+                    // Check frontend health
+                    def frontendHealthy = sh(
+                        script: "curl -f http://${env.EC2_HOST}:3000 || exit 1",
+                        returnStatus: true
+                    ) == 0
+
+                    if (!backendHealthy) {
+                        error('Backend health check failed!')
+                    }
+
+                    if (!frontendHealthy) {
+                        error('Frontend health check failed!')
+                    }
+
+                    echo 'All health checks passed!'
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                echo 'Cleaning up old Docker resources on EC2...'
+
+                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} '
+                            # Remove unused images
+                            docker image prune -f
+
+                            # Remove unused volumes (be careful with this)
+                            # docker volume prune -f
+                        '
+                    """
+                }
             }
         }
     }
 
     post {
-        always {
-            echo 'Cleaning up workspace...'
-            cleanWs()
-        }
-
         success {
-            echo 'Pipeline completed successfully!'
+            echo '✅ Deployment successful!'
 
-            // Send success notification
-            // slackSend(
-            //     color: 'good',
-            //     message: "Build #${env.BUILD_NUMBER} succeeded for ${env.JOB_NAME}"
-            // )
+            script {
+                def deploymentMsg = """
+                    ✅ *Deployment Successful*
 
-            // emailext(
-            //     subject: "✓ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //     body: "Build completed successfully. Commit: ${env.GIT_COMMIT_HASH}",
-            //     to: 'team@buzzlink.com'
-            // )
+                    *Project:* BuzzLink
+                    *Branch:* ${env.BRANCH_NAME}
+                    *Commit:* ${env.GIT_COMMIT_MSG}
+                    *Author:* ${env.GIT_AUTHOR}
+                    *Build:* #${env.BUILD_NUMBER}
+
+                    *Services:*
+                    - Frontend: http://${env.EC2_HOST}:3000
+                    - Backend: http://${env.EC2_HOST}:8080
+                    - API Docs: http://${env.EC2_HOST}:8080/actuator/health
+                """.stripIndent()
+
+                echo deploymentMsg
+
+                // Optional: Send Slack notification
+                // slackSend(channel: env.SLACK_CHANNEL, message: deploymentMsg, color: 'good')
+            }
         }
 
         failure {
-            echo 'Pipeline failed!'
+            echo '❌ Deployment failed!'
 
-            // Send failure notification
-            // slackSend(
-            //     color: 'danger',
-            //     message: "Build #${env.BUILD_NUMBER} failed for ${env.JOB_NAME}"
-            // )
+            script {
+                def failureMsg = """
+                    ❌ *Deployment Failed*
 
-            // emailext(
-            //     subject: "✗ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //     body: "Build failed. Please check Jenkins for details.",
-            //     to: 'team@buzzlink.com'
-            // )
+                    *Project:* BuzzLink
+                    *Branch:* ${env.BRANCH_NAME}
+                    *Build:* #${env.BUILD_NUMBER}
+                    *Author:* ${env.GIT_AUTHOR}
+
+                    Please check Jenkins logs for details.
+                """.stripIndent()
+
+                echo failureMsg
+
+                // Optional: Send Slack notification
+                // slackSend(channel: env.SLACK_CHANNEL, message: failureMsg, color: 'danger')
+            }
         }
 
-        unstable {
-            echo 'Pipeline is unstable!'
+        always {
+            echo 'Pipeline execution completed.'
 
-            // Send warning notification
-            // slackSend(
-            //     color: 'warning',
-            //     message: "Build #${env.BUILD_NUMBER} is unstable for ${env.JOB_NAME}"
-            // )
+            // Cleanup workspace if needed
+            // cleanWs()
         }
     }
 }
