@@ -72,53 +72,40 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Deploy') {
             steps {
-                echo 'Deploying to EC2 instance...'
+                echo 'Deploying application...'
 
-                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
-                    script {
-                        // Execute deployment script on EC2
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} '
-                                # Navigate to project directory
-                                cd ${env.EC2_PROJECT_PATH}
+                script {
+                    // Since Jenkins is running on the same EC2, run commands locally
+                    sh """
+                        # Navigate to project directory
+                        cd ${env.EC2_PROJECT_PATH}
 
-                                # Pull latest changes
-                                echo "Pulling latest code from GitHub..."
-                                git fetch origin
-                                git reset --hard origin/main
+                        # Pull latest changes (simple pull, no hard reset)
+                        echo "Pulling latest code from GitHub..."
+                        git pull origin main
 
-                                # Create .env file from environment variables if needed
-                                # echo "Setting up environment variables..."
-                                # This should be configured separately on EC2
+                        # Stop existing containers
+                        echo "Stopping existing containers..."
+                        docker-compose down
 
-                                # Stop existing containers
-                                echo "Stopping existing containers..."
-                                docker-compose down
+                        # Build and start new containers
+                        echo "Building and starting new containers..."
+                        docker-compose up -d --build
 
-                                # Remove old images to force rebuild
-                                echo "Removing old images..."
-                                docker-compose rm -f
+                        # Wait for services to start
+                        echo "Waiting for services to start..."
+                        sleep 30
 
-                                # Build and start new containers
-                                echo "Building and starting new containers..."
-                                docker-compose up -d --build
+                        # Check service health
+                        echo "Checking service health..."
+                        docker-compose ps
 
-                                # Wait for services to be healthy
-                                echo "Waiting for services to start..."
-                                sleep 30
-
-                                # Check service health
-                                echo "Checking service health..."
-                                docker-compose ps
-
-                                # Show logs for verification
-                                echo "Recent logs:"
-                                docker-compose logs --tail=50
-                            '
-                        """
-                    }
+                        # Show logs for verification
+                        echo "Recent logs:"
+                        docker-compose logs --tail=50
+                    """
                 }
             }
         }
@@ -158,19 +145,12 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                echo 'Cleaning up old Docker resources on EC2...'
+                echo 'Cleaning up old Docker resources...'
 
-                sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} '
-                            # Remove unused images
-                            docker image prune -f
-
-                            # Remove unused volumes (be careful with this)
-                            # docker volume prune -f
-                        '
-                    """
-                }
+                sh """
+                    # Remove unused images
+                    docker image prune -f
+                """
             }
         }
     }
