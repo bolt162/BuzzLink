@@ -82,7 +82,11 @@ pipeline {
                         # Navigate to project directory
                         cd ${env.EC2_PROJECT_PATH}
 
-                        # Pull latest changes (simple pull, no hard reset)
+                        # Stash any local changes before pulling
+                        echo "Stashing local changes..."
+                        git stash
+
+                        # Pull latest changes
                         echo "Pulling latest code from GitHub..."
                         git pull origin main
 
