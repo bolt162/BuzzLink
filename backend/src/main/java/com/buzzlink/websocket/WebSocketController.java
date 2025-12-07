@@ -7,6 +7,7 @@ import com.buzzlink.repository.MessageRepository;
 import com.buzzlink.repository.UserWorkspaceMemberRepository;
 import com.buzzlink.service.DirectMessageService;
 import com.buzzlink.service.MessageService;
+import com.buzzlink.service.ModerationService;
 import com.buzzlink.service.NotificationService;
 import com.buzzlink.service.PresenceService;
 import com.buzzlink.websocket.dto.ChatMessage;
@@ -36,6 +37,7 @@ public class WebSocketController {
     private final DirectMessageService directMessageService;
     private final PresenceService presenceService;
     private final NotificationService notificationService;
+    private final ModerationService moderationService;
     private final MessageRepository messageRepository;
     private final UserWorkspaceMemberRepository workspaceMemberRepository;
 
@@ -76,7 +78,7 @@ public class WebSocketController {
                     "/topic/channel." + request.channelId(),
                     chatMessage);
 
-            // Create notifications for workspace members
+            // Create notifications for workspace members and run AI moderation
             try {
                 Message message = messageRepository.findById(savedMessage.getId()).orElse(null);
                 if (message != null) {
@@ -102,6 +104,9 @@ public class WebSocketController {
                         // Regular channel message - notify all workspace members
                         notificationService.createChannelMessageNotification(message, memberClerkIds);
                     }
+
+                    // Run AI moderation asynchronously
+                    moderationService.analyzeMessage(message, workspaceId);
                 }
             } catch (Exception notifEx) {
                 log.warn("Failed to create notification: {}", notifEx.getMessage());

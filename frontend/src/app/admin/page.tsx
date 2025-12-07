@@ -25,8 +25,10 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'logs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'stats' | 'logs' | 'moderation'>('users');
   const [logLevel, setLogLevel] = useState('INFO');
+  const [flaggedMessages, setFlaggedMessages] = useState<any[]>([]);
+  const [moderationStats, setModerationStats] = useState<{ flaggedCount: number } | null>(null);
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -110,6 +112,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadModerationData = async () => {
+    try {
+      // Get first workspace ID (for demo, you'd need to select workspace)
+      const workspaceId = 1; // TODO: Make this dynamic based on selected workspace
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/moderation/flagged?workspaceId=${workspaceId}&limit=50`, {
+        headers: {
+          'X-Clerk-User-Id': user?.id || '',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setFlaggedMessages(data);
+      }
+
+      const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/moderation/stats?workspaceId=${workspaceId}`, {
+        headers: {
+          'X-Clerk-User-Id': user?.id || '',
+        },
+      });
+
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setModerationStats(statsData);
+      }
+    } catch (error) {
+      console.error('Error loading moderation data:', error);
+    }
+  };
+
   if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -166,6 +199,19 @@ export default function AdminDashboard() {
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Logs
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('moderation');
+                loadModerationData();
+              }}
+              className={`${
+                activeTab === 'moderation'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              AI Moderation
             </button>
           </nav>
         </div>
@@ -553,6 +599,136 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Moderation Tab */}
+        {activeTab === 'moderation' && (
+          <div className="space-y-6">
+            {/* Stats Card */}
+            {moderationStats && (
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="h-6 w-6 text-red-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">
+                          Flagged Messages
+                        </dt>
+                        <dd className="text-lg font-medium text-gray-900">
+                          {moderationStats.flaggedCount}
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Flagged Messages Table */}
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Flagged Messages
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                  Messages flagged by AI content moderation (OpenAI)
+                </p>
+              </div>
+              <div className="border-t border-gray-200">
+                {flaggedMessages.length === 0 ? (
+                  <div className="px-6 py-12 text-center">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No flagged messages</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      All messages are passing AI moderation checks.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Message
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sender
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Channel
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Score
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Timestamp
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {flaggedMessages.map((msg) => (
+                          <tr key={msg.moderationId} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              <div className="max-w-xs truncate">{msg.messageContent}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {msg.senderName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {msg.channelName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  msg.overallScore >= 5
+                                    ? 'bg-red-100 text-red-800'
+                                    : msg.overallScore >= 4
+                                    ? 'bg-orange-100 text-orange-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}
+                              >
+                                {msg.overallScore}/5
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(msg.messageCreatedAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
