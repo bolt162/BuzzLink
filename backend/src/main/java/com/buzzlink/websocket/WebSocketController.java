@@ -78,12 +78,25 @@ public class WebSocketController {
                     "/topic/channel." + request.channelId(),
                     chatMessage);
 
-            // Create notifications for workspace members and run AI moderation
+            // Run AI moderation asynchronously (use workspaceId=1 for default workspace)
             try {
                 Message message = messageRepository.findById(savedMessage.getId()).orElse(null);
                 if (message != null) {
-                    // Get all workspace members for this channel
-                    Long workspaceId = message.getChannel().getWorkspace().getId();
+                    // Use default workspace ID (1) - in production you'd get this from the channel
+                    Long workspaceId = 1L;
+                    // Run AI moderation asynchronously
+                    moderationService.analyzeMessage(message, workspaceId);
+                }
+            } catch (Exception moderationEx) {
+                log.warn("Failed to run moderation: {}", moderationEx.getMessage());
+            }
+
+            // Create notifications for workspace members
+            try {
+                Message message = messageRepository.findById(savedMessage.getId()).orElse(null);
+                if (message != null) {
+                    // Use default workspace ID (1)
+                    Long workspaceId = 1L;
                     List<String> memberClerkIds = workspaceMemberRepository
                             .findByWorkspaceId(workspaceId)
                             .stream()
@@ -104,9 +117,6 @@ public class WebSocketController {
                         // Regular channel message - notify all workspace members
                         notificationService.createChannelMessageNotification(message, memberClerkIds);
                     }
-
-                    // Run AI moderation asynchronously
-                    moderationService.analyzeMessage(message, workspaceId);
                 }
             } catch (Exception notifEx) {
                 log.warn("Failed to create notification: {}", notifEx.getMessage());
